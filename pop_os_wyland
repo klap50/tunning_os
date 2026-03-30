@@ -1,0 +1,210 @@
+# 🧠 RAM / SWAP Tuning – Pop!_OS (Workstation)
+
+## 📅 Fecha
+
+2026-03-30
+
+---
+
+## 🎯 Objetivo
+
+Optimizar el uso de memoria en workstation Linux para:
+
+* Evitar OOM (Out Of Memory)
+* Mejorar fluidez general del sistema
+* Reducir freezes y stuttering
+* Soportar cargas pesadas (Steam, browsers, Discord, etc.)
+
+---
+
+## 🧪 Problema detectado
+
+* Alto consumo de RAM (~11GB / 15GB)
+* Sistema con baja memoria libre (~500MB)
+* OOM killer matando procesos (`steamwebhelper`)
+* Sistema con microcortes y congelamientos
+
+---
+
+## 🛠️ Acciones realizadas
+
+---
+
+### 1️⃣ Creación de SWAP en disco
+
+Se creó un archivo de swap de 8GB como respaldo.
+
+```bash
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+---
+
+### 2️⃣ Verificación de swap
+
+```bash
+swapon --show
+```
+
+Resultado esperado:
+
+* Swap activo en `/swapfile`
+* Swap existente en `/dev/dm-0`
+
+---
+
+### 3️⃣ Instalación de ZRAM
+
+Se instala zram para usar memoria comprimida en RAM (más rápida que swap en disco).
+
+```bash
+sudo apt install zram-tools
+```
+
+---
+
+### 4️⃣ Configuración de ZRAM
+
+Archivo editado:
+
+```bash
+/etc/default/zramswap
+```
+
+Configuración final:
+
+```bash
+ALGO=lz4
+PERCENT=50
+PRIORITY=100
+```
+
+#### Explicación:
+
+* `ALGO=lz4` → algoritmo rápido (ideal desktop)
+* `PERCENT=50` → usa el 50% de la RAM como zram
+* `PRIORITY=100` → prioridad mayor que swap en disco
+
+---
+
+### ⚠️ Error detectado y corregido
+
+Error inicial:
+
+```text
+Error: setting compression algo to 0
+```
+
+Causa:
+
+```bash
+ALGO=0   ❌
+```
+
+Solución:
+
+```bash
+ALGO=lz4   ✅
+```
+
+---
+
+### 5️⃣ Reinicio del sistema
+
+Se realizó reboot para aplicar correctamente:
+
+```bash
+reboot
+```
+
+---
+
+## ✅ Estado final
+
+```bash
+swapon --show
+```
+
+Resultado:
+
+```text
+/dev/zram0 → ~7.7G → PRIO 100
+/dev/dm-0  → 4G    → PRIO -2
+/swapfile  → 8G    → PRIO -3 (opcional)
+```
+
+---
+
+## 🧠 Funcionamiento final
+
+Orden de uso de memoria:
+
+1. RAM física
+2. ZRAM (rápido, comprimido)
+3. Swap en disco (lento, fallback)
+
+---
+
+## ⚙️ Ajuste adicional (opcional)
+
+Reducir uso agresivo de swap:
+
+```bash
+sudo nano /etc/sysctl.conf
+```
+
+Agregar:
+
+```bash
+vm.swappiness=10
+```
+
+Aplicar:
+
+```bash
+sudo sysctl -p
+```
+
+---
+
+## 📈 Beneficios obtenidos
+
+* Menor uso de RAM real
+* Eliminación de OOM killer
+* Mayor estabilidad general
+* Mejor respuesta del sistema
+* Reducción de freezes
+
+---
+
+## ⚠️ Pendientes / Notas
+
+* Persisten posibles problemas relacionados a:
+
+  * Kernel reciente (6.18)
+  * Drivers AMD (amdgpu)
+  * Wayland
+
+👉 Próximo paso recomendado:
+
+* Evaluar uso en X11
+* Considerar kernel LTS (6.6)
+
+---
+
+## 🧩 Conclusión
+
+Se implementó un esquema híbrido de memoria:
+
+* RAM + ZRAM + SWAP
+
+Esto transforma el sistema en una workstation más estable y tolerante a carga.
+
+---
+
+## 🏷️ Tags
+
+`linux` `tuning` `zram` `swap` `performance` `pop-os` `workstation`
